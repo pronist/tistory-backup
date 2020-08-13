@@ -1,10 +1,9 @@
 <template lang="pug">
   #auth
     nav#nav
-      a(href='https://tistory.com' target='_blank')
-        img(src='static/images/logo.png')
+      img(src='static/images/logo.png')
     main#main
-      h1 티스토리 백업 서비스
+      h1 티스토리 백업
       h2 티스토리 블로그에 담겨있는 소중한 포스트들을 백업해보세요!
       a(href='#' @click='openTistoryWindow') 티스토리 인증하기
 </template>
@@ -34,8 +33,11 @@ export default {
         if (newURL.includes(this.$store.state.tistory.tistory.redirectUri)) {
           tistoryWinodw.close()
 
-          const accessToken = newURL.split('#access_token=')[1].split('&')[0]
-          this.$router.push(`/extractor#access_token=${accessToken}&state=`)
+          this.$store.dispatch('setAccessToken', {
+            accessToken: newURL.split('#access_token=')[1].split('&')[0]
+          })
+
+          this.$router.push(`/extractor#access_token=${this.$store.state.tistory.accessToken}&state=`)
         }
       })
     }

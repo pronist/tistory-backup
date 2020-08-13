@@ -19,7 +19,7 @@
     "postinstall": "npm run lint:fix"
   },
   "build": {
-    "productName": "tistory-backup",
+    "productName": "TistoryBackup",
     "appId": "com.pronist.tistory-backup",
     "directories": {
       "output": "build"

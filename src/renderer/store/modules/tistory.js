@@ -14,8 +14,8 @@ const mutations = {
 }
 
 const actions = {
-  setAccessToken ({ commit }, accessToken) {
-    commit('setAccessToken', accessToken)
+  setAccessToken ({ commit }, payload) {
+    commit('setAccessToken', payload.accessToken)
   }
 }
 
