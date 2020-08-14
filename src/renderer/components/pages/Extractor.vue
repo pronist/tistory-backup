@@ -36,7 +36,6 @@
 
 import tistory from 'tistory'
 import JSZip from 'jszip'
-import cheerio from 'cheerio'
 import moment from 'moment'
 import Swal from 'sweetalert2'
 
@@ -163,6 +162,7 @@ export default {
               Swal.fire({ icon: 'error', title: '이런!', text: `https://${blogName}.tistory.com/${page - 1} 에 해당하는 글 목록을 불러올 수 없습니다.` })
               this.errors.push(`https://${blogName}.tistory.com/${page - 1} 에 해당하는 글 목록을 불러올 수 없습니다.`)
             })
+
             if (postList.data.tistory.item.hasOwnProperty('posts')) {
               await this.buildZip(rootFolder, blogName, postList.data.tistory.item.posts)
             } else break
