@@ -28,6 +28,8 @@
       #metainfo
         .url {{ url }}
         .message {{ message }}
+        .errors
+          .e(v-for='error in errors') {{ error }}
 </template>
 
 <script>
@@ -46,7 +48,10 @@ export default {
   name: 'extractor',
   async mounted () {
     this.isValidAccessToken().then(async () => {
-      const blogInfo = await tistory.blog.info(this.$store.state.tistory.accessToken).catch(reason => Swal.fire({ icon: 'error', title: '이런!', text: '블로그 정보를 불러올 수 없습니다.' }))
+      const blogInfo = await tistory.blog.info(this.$store.state.tistory.accessToken).catch(reason => {
+        Swal.fire({ icon: 'error', title: '이런!', text: '블로그 정보를 불러올 수 없습니다.' })
+        this.errors.push('블로그 정보를 불러올 수 없습니다.')
+      })
 
       this.blogs = blogInfo.data.tistory.item.blogs
       this.userProfile = this.blogs.filter(blog => blog.default === 'Y')[0].profileImageUrl
@@ -58,41 +63,64 @@ export default {
       blogs: [],
       checkedNames: [],
       url: null,
-      message: null
+      message: null,
+      errors: []
     }
   },
   methods: {
-    refreshWindow () {
-      electron.getCurrentWindow().reload()
+    async images (doc, postFolder, pathname) {
+      for (const img of doc.querySelectorAll('img')) {
+        const sources = img.getAttribute('src').split(',')
+        const imgRegex = /kage@(.*)/
+
+        for (let i = 0; i < sources.length; i++) {
+          if (imgRegex.test(sources[i])) {
+            const imageSourceName = imgRegex.exec(sources[i])[1]
+
+            const response = await fetch(`https://blog.kakaocdn.net/dn/${imageSourceName}`)
+            switch (response.status) {
+              case 404: {
+                this.errors.push(`https://blog.kakaocdn.net/dn/${imageSourceName} 를 가져오는데 실패했습니다.`)
+              }
+            }
+
+            let imageFilename = imageSourceName.replace(/\//g, '_')
+            imageFilename = imageFilename.substring(0, imageFilename.length - 8)
+            imageFilename = imageFilename + '.' + response.headers.get('Content-Type').substring(6)
+
+            postFolder.file(imageFilename, response.blob())
+
+            if (i > 0) {
+              const newImg = doc.createElement('img')
+              newImg.setAttribute('src', './' + imageFilename)
+              img.parentNode.appendChild(newImg)
+            } else {
+              img.setAttribute('src', './' + imageFilename)
+            }
+
+            this.message = `${pathname}/${imageFilename}`
+          }
+        }
+      }
+    },
+    html (doc, postFolder, pathname) {
+      postFolder.file('index.html', new XMLSerializer().serializeToString(doc))
+      this.message = `${pathname}/index.html`
     },
     async collectZipContents (html, postFolder) {
       const parser = new DOMParser()
       const doc = parser.parseFromString(html, 'text/html')
       const pathname = this.message
 
-      for (const img of doc.querySelectorAll('img')) {
-        const src = img.getAttribute('src')
-        const imgRegex = /https?:\/\/cfs.tistory.com\/attach\/\d*\/kage@(.*)/
-
-        if (imgRegex.test(src)) {
-          const response = await fetch('https://blog.kakaocdn.net/dn/' + imgRegex.exec(src)[1])
-
-          let imageFilename = imgRegex.exec(src)[1].replace(/\//g, '_')
-          imageFilename = imageFilename.substring(0, imageFilename.length - 8)
-          imageFilename = imageFilename + '.' + response.headers.get('Content-Type').substring(6)
-
-          postFolder.file(imageFilename, response.blob())
-          img.setAttribute('src', './' + imageFilename)
-
-          this.message = `${pathname}/${imageFilename}`
-        }
-      }
-      postFolder.file('index.html', new XMLSerializer().serializeToString(doc))
-      this.message = `${pathname}/index.html`
+      await this.images(doc, postFolder, pathname)
+      this.html(doc, postFolder, pathname)
     },
     async buildZip (rootFolder, blogName, posts) {
       for (const post of posts) {
-        const postDetail = await tistory.post.read(this.$store.state.tistory.accessToken, { blogName, postId: post.id }).catch(reason => Swal.fire({ icon: 'error', title: '이런!', text: `${post.postUrl} 에 해당하는 포스트를 찾을 수 없습니다.` }))
+        const postDetail = await tistory.post.read(this.$store.state.tistory.accessToken, { blogName, postId: post.id }).catch(reason => {
+          Swal.fire({ icon: 'error', title: '이런!', text: `${post.postUrl} 에 해당하는 포스트를 찾을 수 없습니다.` })
+          this.errors.push(`${post.postUrl} 에 해당하는 포스트를 찾을 수 없습니다.`)
+        })
         const postFolder = rootFolder.folder(post.title)
 
         this.url = post.postUrl
@@ -118,6 +146,7 @@ export default {
     async zip (checkedNames) {
       if (checkedNames.length <= 0) {
         Swal.fire({ icon: 'error', title: '이런!', text: '티스토리 블로그를 백업하려면 블로그 선택해야합니다.' })
+        this.errors.push('티스토리 블로그를 백업하려면 블로그 선택해야합니다.')
         return
       }
       this.isValidAccessToken().then(async () => {
@@ -130,7 +159,10 @@ export default {
           let page = 1
 
           while (true) {
-            const postList = await tistory.post.list(this.$store.state.tistory.accessToken, { blogName, page: page++ }).catch(reason => Swal.fire({ icon: 'error', title: '이런!', text: `글 목록을 불러올 수 없습니다.` }))
+            const postList = await tistory.post.list(this.$store.state.tistory.accessToken, { blogName, page: page++ }).catch(reason => {
+              Swal.fire({ icon: 'error', title: '이런!', text: `https://${blogName}.tistory.com/${page - 1} 에 해당하는 글 목록을 불러올 수 없습니다.` })
+              this.errors.push(`https://${blogName}.tistory.com/${page - 1} 에 해당하는 글 목록을 불러올 수 없습니다.`)
+            })
             if (postList.data.tistory.item.hasOwnProperty('posts')) {
               await this.buildZip(rootFolder, blogName, postList.data.tistory.item.posts)
             } else break
@@ -138,6 +170,9 @@ export default {
         }
         this.generateZip(zip)
       })
+    },
+    refreshWindow () {
+      electron.getCurrentWindow().reload()
     },
     isValidAccessToken () {
       return tistory.blog.info(this.$store.state.tistory.accessToken).catch(reason => Swal.fire({ icon: 'error', title: '이런!', text: '티스토리 세션이 만료되어 인증을 다시해야 합니다.' }).then(() => this.$router.push('/')))
@@ -196,10 +231,17 @@ export default {
             color black
       #metainfo
         margin 15px 0
+        *
+          word-break break-all
         .url
           margin-bottom 3px
           font-size .9rem
         .message
           color black
           font-weight 500
+        .errors
+          margin-top 10px
+          .e
+            color red
+            margin 5px 0
 </style>

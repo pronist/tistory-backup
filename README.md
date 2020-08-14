@@ -1,4 +1,4 @@
-# Tistory-Backup
+# Tistory Backup
 
 **Tistory Backup** is a Desktop Application for posts backup of **Tistroy blog**. \
 This application has been used to [electron-vue](https://github.com/SimulatedGREG/electron-vue).
