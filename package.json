@@ -1,6 +1,6 @@
 {
   "name": "tistory-backup",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "SangWoo Jeong <pronist@naver.com>",
   "description": "a Desktop Application for posts backup of Tistroy blog",
   "license": null,
@@ -55,6 +55,7 @@
   "dependencies": {
     "jszip": "^3.5.0",
     "moment": "^2.27.0",
+    "qs": "^6.9.4",
     "sweetalert2": "^9.17.1",
     "tistory": "^2.2.2",
     "uikit": "^3.5.5",

@@ -1,8 +1,9 @@
 const state = {
   tistory: {
     clientId: '9d95acf2e27190b1c9d70e7adc88ca6f',
-    responseType: 'token',
-    redirectUri: 'http://localhost:9080/#/extractor'
+    secret: '9d95acf2e27190b1c9d70e7adc88ca6f569946d18b3cfddb75aa935f963446e1fedb83ab',
+    responseType: 'code',
+    redirectUri: 'http://localhost:9080/#/'
   },
   accessToken: null
 }

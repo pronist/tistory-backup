@@ -4,7 +4,6 @@
       div(class='uk-navbar-left')
         ul(class='uk-navbar-nav')
           li: router-link(to='/' uk-icon='icon: arrow-left; ratio: 1.4')
-          li: a(href='#' uk-icon='icon: refresh; ratio: 1.2' @click='refreshWindow')
       div(class='uk-navbar-right')
         ul(class='uk-navbar-nav')
           li: img(:src='userProfile')
@@ -145,8 +144,7 @@ export default {
     async zip (checkedNames) {
       if (checkedNames.length <= 0) {
         Swal.fire({ icon: 'error', title: '이런!', text: '티스토리 블로그를 백업하려면 블로그 선택해야합니다.' })
-        this.errors.push('티스토리 블로그를 백업하려면 블로그 선택해야합니다.')
-        return
+        return this.errors.push('티스토리 블로그를 백업하려면 블로그 선택해야합니다.')
       }
       this.isValidAccessToken().then(async () => {
         const zip = new JSZip()
@@ -170,9 +168,6 @@ export default {
         }
         this.generateZip(zip)
       })
-    },
-    refreshWindow () {
-      electron.getCurrentWindow().reload()
     },
     isValidAccessToken () {
       return tistory.blog.info(this.$store.state.tistory.accessToken).catch(reason => Swal.fire({ icon: 'error', title: '이런!', text: '티스토리 세션이 만료되어 인증을 다시해야 합니다.' }).then(() => this.$router.push('/')))

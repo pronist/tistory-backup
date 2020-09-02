@@ -13,6 +13,8 @@
 <script>
 import tistory from 'tistory'
 import { webContents } from 'electron'
+import qs from 'qs'
+import Swal from 'sweetalert2'
 
 const electron = require('electron').remote
 
@@ -31,21 +33,43 @@ export default {
     }
   },
   methods: {
+    async getAccessToken (url) {
+      const parts = url.split('?')
+      if (parts.length > 1) {
+        const queries = qs.parse(parts[1])
+        if (queries.code) {
+          const { data } = await tistory.auth.getAccessToken(
+            this.$store.state.tistory.tistory.clientId,
+            this.$store.state.tistory.tistory.secret,
+            this.$store.state.tistory.tistory.redirectUri,
+            queries.code
+          )
+          return data.access_token
+        }
+      }
+    },
     login () {
       const tistoryWindow = new electron.BrowserWindow(this.windowOptions)
-      tistoryWindow.loadURL(this.permissionUrl)
-
       const contents = tistoryWindow.webContents
-      contents.on('did-get-redirect-request', (event, oldURL, newURL) => {
-        if (newURL.includes(this.$store.state.tistory.tistory.redirectUri)) {
+
+      contents.on('did-finish-load', async () => {
+        if (contents.getURL().includes(this.$store.state.tistory.tistory.redirectUri)) {
           tistoryWindow.close()
 
-          this.$store.dispatch('setAccessToken', {
-            accessToken: newURL.split('#access_token=')[1].split('&')[0]
-          })
-          this.$router.push(`/extractor#access_token=${this.$store.state.tistory.accessToken}&state=`)
+          const accessToken = await this.getAccessToken(contents.getURL())
+          if (accessToken) {
+            this.$store.dispatch('setAccessToken', { accessToken })
+            return this.$router.push('/extractor')
+          }
+          return Swal.fire({ icon: 'error', title: '이런!', text: '티스토리 인증에 실패했습니다.' })
         }
       })
+
+      return tistoryWindow.loadURL(tistory.auth.getPermissionUrl(
+        this.$store.state.tistory.tistory.clientId,
+        this.$store.state.tistory.tistory.redirectUri,
+        this.$store.state.tistory.tistory.responseType
+      ))
     },
     logout () {
       const logoutWindow = new electron.BrowserWindow(this.windowOptions)
@@ -59,15 +83,6 @@ export default {
           this.$store.dispatch('setAccessToken', { accessToken: null })
         }
       })
-    }
-  },
-  computed: {
-    permissionUrl () {
-      return tistory.auth.getPermissionUrl(
-        this.$store.state.tistory.tistory.clientId,
-        this.$store.state.tistory.tistory.redirectUri,
-        this.$store.state.tistory.tistory.responseType
-      )
     }
   }
 }
